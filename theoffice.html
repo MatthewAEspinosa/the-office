@@ -479,24 +479,50 @@ you’ve engineered. Also add an indicator variable called
 <code>michael</code> which takes the value <code>1</code> if Michael
 Scott (Steve Carrell) was there, and <code>0</code> if not. Note:
 Michael Scott (Steve Carrell) left the show at the end of Season 7.</h3>
+<pre class="r"><code>office_df &lt;- theoffice %&gt;%
+select(season, episode, episode_name, imdb_rating, total_votes, air_date) %&gt;%
+distinct(season, episode, .keep_all = TRUE) %&gt;%
+  left_join(halloween_episodes, by = &quot;episode_name&quot;) %&gt;%
+  left_join(valentine_episodes, by = &quot;episode_name&quot;) %&gt;%
+  left_join(christmas_episodes, by = &quot;episode_name&quot;) %&gt;%
+  replace_na(list(halloween = 0, valentine = 0, christmas = 0)) %&gt;%
+  mutate(michael = if_else(season &gt; 7, 0, 1)) %&gt;%
+  mutate(across(halloween:michael, as.factor)) %&gt;%
+  left_join(office_lines, by = c(&quot;season&quot;, &quot;episode&quot;, &quot;episode_name&quot;))</code></pre>
 </div>
 <div id="exercise-4---split-the-data-into-training-75-and-testing-25." class="section level3">
 <h3>Exercise 4 - Split the data into training (75%) and testing
 (25%).</h3>
-<pre class="r"><code>set.seed(1122)</code></pre>
+<pre class="r"><code>set.seed(1122)
+
+office_split &lt;- initial_split(office_df)
+office_train &lt;- training(office_split)
+office_test &lt;- testing(office_split)</code></pre>
 </div>
 <div id="exercise-5---specify-a-linear-regression-model." class="section level3">
 <h3>Exercise 5 - Specify a linear regression model.</h3>
+<pre class="r"><code>office_mod &lt;- linear_reg() %&gt;%
+  set_engine(&quot;lm&quot;)</code></pre>
 </div>
 <div id="exercise-6---create-a-recipe-that-updates-the-role-of-episode_name-to-not-be-a-predictor-removes-air_date-as-a-predictor-uses-season-as-a-factor-and-removes-all-zero-variance-predictors." class="section level3">
 <h3>Exercise 6 - Create a recipe that updates the role of
 <code>episode_name</code> to not be a predictor, removes
 <code>air_date</code> as a predictor, uses <code>season</code> as a
 factor, and removes all zero variance predictors.</h3>
+<pre class="r"><code>office_rec &lt;- recipe(
+  imdb_rating ~ .,
+  data = office_train) %&gt;%
+  update_role(episode_name, new_role = &quot;id&quot;)%&gt;%
+  step_rm(air_date) %&gt;%
+  step_dummy(all_nominal(), -episode_name) %&gt;%
+  step_zv(all_predictors())</code></pre>
 </div>
 <div id="exercise-7---build-a-workflow-for-fitting-the-model-specified-earlier-and-using-the-recipe-you-developed-to-preprocess-the-data." class="section level3">
 <h3>Exercise 7 - Build a workflow for fitting the model specified
 earlier and using the recipe you developed to preprocess the data.</h3>
+<pre class="r"><code>office_wflow &lt;- workflow() %&gt;%
+  add_model(office_mod) %&gt;%
+  add_recipe(office_rec)</code></pre>
 </div>
 <div id="exercise-8---fit-the-model-to-training-data-and-interpret-a-couple-of-the-slope-coefficients." class="section level3">
 <h3>Exercise 8 - Fit the model to training data and interpret a couple
